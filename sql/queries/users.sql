@@ -18,3 +18,10 @@ SELECT ID,
 
 -- name: ResetUsersTable :exec
 DELETE FROM USERS;
+
+-- name: GetUsers :many
+SELECT ID,
+       CREATED_AT,
+       UPDATED_AT,
+       NAME
+  FROM USERS;
