@@ -22,3 +22,13 @@ SELECT F.NAME,
        U.NAME USERNAME
   FROM FEEDS F
   JOIN USERS U ON F.USER_ID = U.ID;
+
+-- name: GetFeedByURL :one
+SELECT ID,
+       CREATED_AT,
+       UPDATED_AT,
+       NAME,
+       URL,
+       USER_ID
+  FROM FEEDS
+ WHERE URL = $1;

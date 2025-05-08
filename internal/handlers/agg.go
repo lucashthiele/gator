@@ -52,7 +52,7 @@ func fetchFeed(ctx context.Context, feedUrl string) (*model.RSSFeed, error) {
 	return rssfeed, err
 }
 
-func HandleAgg(s *model.State, cmd model.Command) error {
+func HandlerAgg(s *model.State, cmd model.Command) error {
 	_, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
 	if err != nil {
 		return err

@@ -8,7 +8,51 @@ import (
 	"github.com/google/uuid"
 	"github.com/lucashthiele/gator/internal/database"
 	"github.com/lucashthiele/gator/internal/model"
+	"github.com/lucashthiele/gator/internal/shared"
 )
+
+func createFeed(s *model.State, feedName, feedUrl string) (database.Feed, error) {
+	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		return database.Feed{}, err
+	}
+
+	feed := &database.Feed{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      feedName,
+		Url:       feedUrl,
+		UserID:    user.ID,
+	}
+
+	createdFeed, err := s.Db.CreateFeed(context.Background(), database.CreateFeedParams(*feed))
+	if err != nil {
+		return database.Feed{}, err
+	}
+	return createdFeed, nil
+}
+
+func createFollow(s *model.State, createdFeed database.Feed) error {
+	user, err := shared.GetCurrentUser(s)
+	if err != nil {
+		return err
+	}
+
+	feedFollow := &database.FeedFollow{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    createdFeed.ID,
+	}
+
+	_, err = s.Db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams(*feedFollow))
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func HandlerAddFeed(s *model.State, cmd model.Command) error {
 	expectedArguments := 2
@@ -22,21 +66,12 @@ func HandlerAddFeed(s *model.State, cmd model.Command) error {
 	feedName := cmd.Arguments[0]
 	feedUrl := cmd.Arguments[1]
 
-	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
+	createdFeed, err := createFeed(s, feedName, feedUrl)
 	if err != nil {
 		return err
 	}
 
-	feed := &database.Feed{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Name:      feedName,
-		Url:       feedUrl,
-		UserID:    user.ID,
-	}
-
-	createdFeed, err := s.Db.CreateFeed(context.Background(), database.CreateFeedParams(*feed))
+	err = createFollow(s, createdFeed)
 	if err != nil {
 		return err
 	}
