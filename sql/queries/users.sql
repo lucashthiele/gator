@@ -15,3 +15,6 @@ SELECT ID,
        NAME
   FROM USERS
  WHERE NAME = $1;
+
+-- name: ResetUsersTable :exec
+DELETE FROM USERS;

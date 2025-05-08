@@ -15,11 +15,12 @@ import (
 func registerHandlers(cmd *model.Commands) {
 	cmd.Register("login", handlers.HandlerLogin)
 	cmd.Register("register", handlers.HandlerRegister)
+	cmd.Register("reset", handlers.HandlerReset)
 }
 
 func getCommand(args []string) (model.Command, error) {
 	if len(args) < 2 {
-		return model.Command{}, fmt.Errorf("no Command provided")
+		return model.Command{}, fmt.Errorf("no command provided")
 	}
 
 	cmdName := args[1]
