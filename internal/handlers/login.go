@@ -9,10 +9,12 @@ import (
 )
 
 func HandlerLogin(s *model.State, cmd model.Command) error {
-	if len(cmd.Arguments) != 1 {
+	expectedArguments := 1
+
+	if len(cmd.Arguments) != expectedArguments {
 		return fmt.Errorf(
 			"expected %d arguments but got %d arguments\nyou need to provide only the username for login",
-			1,
+			expectedArguments,
 			len(cmd.Arguments))
 	}
 

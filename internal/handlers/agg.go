@@ -14,6 +14,7 @@ import (
 func handleUnescapedSymbols(rss *model.RSSFeed) *model.RSSFeed {
 	rss.Channel.Title = html.UnescapeString(rss.Channel.Title)
 	rss.Channel.Description = html.UnescapeString(rss.Channel.Description)
+
 	for i, item := range rss.Channel.Item {
 		rss.Channel.Item[i].Title = html.UnescapeString(item.Title)
 		rss.Channel.Item[i].Description = html.UnescapeString(item.Description)

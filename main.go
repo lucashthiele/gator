@@ -18,6 +18,7 @@ func registerHandlers(cmd *model.Commands) {
 	cmd.Register("reset", handlers.HandlerReset)
 	cmd.Register("users", handlers.HandlerUsers)
 	cmd.Register("agg", handlers.HandleAgg)
+	cmd.Register("addfeed", handlers.HandlerAddFeed)
 }
 
 func getCommand(args []string) (model.Command, error) {
