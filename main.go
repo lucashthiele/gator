@@ -19,6 +19,7 @@ func registerHandlers(cmd *model.Commands) {
 	cmd.Register("users", handlers.HandlerUsers)
 	cmd.Register("agg", handlers.HandleAgg)
 	cmd.Register("addfeed", handlers.HandlerAddFeed)
+	cmd.Register("feeds", handlers.HandlerFeeds)
 }
 
 func getCommand(args []string) (model.Command, error) {
