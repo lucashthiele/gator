@@ -1,64 +1,25 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
+	_ "github.com/lib/pq"
 	"github.com/lucashthiele/gator/internal/config"
+	"github.com/lucashthiele/gator/internal/database"
+	"github.com/lucashthiele/gator/internal/handlers"
+	"github.com/lucashthiele/gator/internal/model"
 )
 
-type state struct {
-	Config *config.Config
+func registerHandlers(cmd *model.Commands) {
+	cmd.Register("login", handlers.HandlerLogin)
+	cmd.Register("register", handlers.HandlerRegister)
 }
 
-type command struct {
-	Name      string
-	Arguments []string
-}
-
-type commands struct {
-	Handlers map[string]func(*state, command) error
-}
-
-func (c *commands) run(s *state, cmd command) error {
-	handler, found := c.Handlers[cmd.Name]
-	if !found {
-		return fmt.Errorf("command not supported")
-	}
-	return handler(s, cmd)
-}
-
-func (c *commands) register(name string, handler func(*state, command) error) {
-	c.Handlers[name] = handler
-}
-
-func handlerLogin(s *state, cmd command) error {
-	if len(cmd.Arguments) != 1 {
-		return fmt.Errorf(
-			"expected %d arguments but got %d arguments\nyou need to provide only the username for login",
-			1,
-			len(cmd.Arguments))
-	}
-
-	username := cmd.Arguments[0]
-
-	err := s.Config.SetUser(username)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("user has been set!")
-
-	return nil
-}
-
-func registerHandlers(cmd *commands) {
-	cmd.register("login", handlerLogin)
-}
-
-func getCommand(args []string) (command, error) {
+func getCommand(args []string) (model.Command, error) {
 	if len(args) < 2 {
-		return command{}, fmt.Errorf("no command provided")
+		return model.Command{}, fmt.Errorf("no Command provided")
 	}
 
 	cmdName := args[1]
@@ -67,7 +28,7 @@ func getCommand(args []string) (command, error) {
 		cmdArgs = args[2:]
 	}
 
-	return command{
+	return model.Command{
 		Name:      cmdName,
 		Arguments: cmdArgs,
 	}, nil
@@ -80,12 +41,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := &state{
-		Config: &c,
+	dbURL := c.DbURL
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	cmds := commands{
-		Handlers: make(map[string]func(*state, command) error),
+	dbQueries := database.New(db)
+
+	s := &model.State{
+		Db:     dbQueries,
+		Config: c,
+	}
+
+	cmds := model.Commands{
+		Handlers: make(map[string]func(*model.State, model.Command) error),
 	}
 	registerHandlers(&cmds)
 
@@ -96,7 +67,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = cmds.run(s, cmd)
+	err = cmds.Run(s, cmd)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -42,21 +42,21 @@ func write(data []byte) error {
 	return nil
 }
 
-func Read() (Config, error) {
+func Read() (*Config, error) {
 	configFilePath, err := getFilePath()
 	if err != nil {
-		return Config{}, err
+		return &Config{}, err
 	}
 
 	data, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return Config{}, err
+		return &Config{}, err
 	}
 
-	config := Config{}
-	err = json.Unmarshal(data, &config)
+	config := &Config{}
+	err = json.Unmarshal(data, config)
 	if err != nil {
-		return Config{}, err
+		return &Config{}, err
 	}
 
 	return config, nil
