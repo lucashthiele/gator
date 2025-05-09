@@ -9,12 +9,12 @@ import (
 	"github.com/lucashthiele/gator/internal/model"
 )
 
-func GetFeedFromURL(s *model.State, feedUrl string) (*database.Feed, error) {
+func GetFeedFromURL(s *model.State, feedUrl string) (*database.GetFeedByURLRow, error) {
 	feed, err := s.Db.GetFeedByURL(context.Background(), feedUrl)
 	if err == sql.ErrNoRows {
-		return &database.Feed{}, fmt.Errorf("feed with provided url does not exist")
+		return &database.GetFeedByURLRow{}, fmt.Errorf("feed with provided url does not exist")
 	} else if err != nil {
-		return &database.Feed{}, err
+		return &database.GetFeedByURLRow{}, err
 	}
 	return &feed, nil
 }

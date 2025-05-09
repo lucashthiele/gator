@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,7 +29,7 @@ INSERT INTO FEEDS (
   $5,
   $6
 )
-RETURNING id, created_at, updated_at, name, url, user_id
+RETURNING id, created_at, updated_at, name, url, user_id, last_fetched_at
 `
 
 type CreateFeedParams struct {
@@ -57,6 +58,7 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 		&i.Name,
 		&i.Url,
 		&i.UserID,
+		&i.LastFetchedAt,
 	)
 	return i, err
 }
@@ -72,9 +74,18 @@ SELECT ID,
  WHERE URL = $1
 `
 
-func (q *Queries) GetFeedByURL(ctx context.Context, url string) (Feed, error) {
+type GetFeedByURLRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      string
+	Url       string
+	UserID    uuid.UUID
+}
+
+func (q *Queries) GetFeedByURL(ctx context.Context, url string) (GetFeedByURLRow, error) {
 	row := q.db.QueryRowContext(ctx, getFeedByURL, url)
-	var i Feed
+	var i GetFeedByURLRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
@@ -121,4 +132,59 @@ func (q *Queries) GetFeeds(ctx context.Context) ([]GetFeedsRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getNextFeedToFetch = `-- name: GetNextFeedToFetch :many
+SELECT ID,
+       NAME,
+       URL
+  FROM FEEDS
+ ORDER BY LAST_FETCHED_AT ASC NULLS FIRST
+`
+
+type GetNextFeedToFetchRow struct {
+	ID   uuid.UUID
+	Name string
+	Url  string
+}
+
+func (q *Queries) GetNextFeedToFetch(ctx context.Context) ([]GetNextFeedToFetchRow, error) {
+	rows, err := q.db.QueryContext(ctx, getNextFeedToFetch)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetNextFeedToFetchRow
+	for rows.Next() {
+		var i GetNextFeedToFetchRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Url); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markFeedFetched = `-- name: MarkFeedFetched :exec
+UPDATE FEEDS
+   SET LAST_FETCHED_AT = $1,
+       UPDATED_AT = $2
+ WHERE ID = $3
+`
+
+type MarkFeedFetchedParams struct {
+	LastFetchedAt sql.NullTime
+	UpdatedAt     time.Time
+	ID            uuid.UUID
+}
+
+func (q *Queries) MarkFeedFetched(ctx context.Context, arg MarkFeedFetchedParams) error {
+	_, err := q.db.ExecContext(ctx, markFeedFetched, arg.LastFetchedAt, arg.UpdatedAt, arg.ID)
+	return err
 }

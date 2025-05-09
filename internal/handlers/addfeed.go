@@ -16,7 +16,7 @@ func createFeed(s *model.State, feedName, feedUrl string) (database.Feed, error)
 		return database.Feed{}, err
 	}
 
-	feed := &database.Feed{
+	feed := &database.CreateFeedParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -70,7 +70,6 @@ func HandlerAddFeed(s *model.State, cmd model.Command, user *database.User) erro
 		return err
 	}
 
-	fmt.Printf("Created Feed: \n%q", createdFeed)
-
+	fmt.Printf("Created Feed: \n%q", createdFeed.ID)
 	return nil
 }

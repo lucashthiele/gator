@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"html"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/lucashthiele/gator/internal/database"
 	"github.com/lucashthiele/gator/internal/model"
 )
 
@@ -47,15 +50,71 @@ func fetchFeed(ctx context.Context, feedUrl string) (*model.RSSFeed, error) {
 	}
 	rssfeed = handleUnescapedSymbols(rssfeed)
 
-	fmt.Printf("%q", rssfeed)
-
 	return rssfeed, err
 }
 
+func markFeedFetched(feed database.GetNextFeedToFetchRow, s *model.State) error {
+	params := database.MarkFeedFetchedParams{
+		LastFetchedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		UpdatedAt: time.Now(),
+		ID:        feed.ID,
+	}
+	return s.Db.MarkFeedFetched(context.Background(), params)
+}
+
+func printPosts(fetchedFeed *model.RSSFeed) {
+	fmt.Println("List of post in this feed:")
+	for _, post := range fetchedFeed.Channel.Item {
+		fmt.Printf(" - %s\n", post.Title)
+	}
+}
+
+func scrapeFeeds(s *model.State) {
+	feeds, err := s.Db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		fmt.Printf("Error during scraping (getting next feed to fetch): %s\n", err.Error())
+	}
+
+	for _, feed := range feeds {
+		fmt.Printf("Fetching feed: %s\n", feed.Name)
+
+		fetchedFeed, err := fetchFeed(context.Background(), feed.Url)
+		if err != nil {
+			fmt.Printf("Error during scraping (fetching Feed): %s\n", err.Error())
+		}
+
+		printPosts(fetchedFeed)
+
+		err = markFeedFetched(feed, s)
+		if err != nil {
+			fmt.Printf("Error during scraping (marking as fetched): %s\n", err.Error())
+		}
+	}
+}
+
 func HandlerAgg(s *model.State, cmd model.Command) error {
-	_, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	expectedArguments := 1
+
+	if len(cmd.Arguments) != expectedArguments {
+		return fmt.Errorf(
+			"expected %d arguments but got %d arguments\nyou need to provide the time between requests",
+			expectedArguments,
+			len(cmd.Arguments))
+	}
+
+	inputDuration := cmd.Arguments[0]
+	timeBetweenRequests, err := time.ParseDuration(inputDuration)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	fmt.Printf("Fetching feeds every %s\n", timeBetweenRequests.String())
+
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
 }
