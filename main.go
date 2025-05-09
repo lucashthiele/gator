@@ -9,6 +9,7 @@ import (
 	"github.com/lucashthiele/gator/internal/config"
 	"github.com/lucashthiele/gator/internal/database"
 	"github.com/lucashthiele/gator/internal/handlers"
+	"github.com/lucashthiele/gator/internal/middlewares"
 	"github.com/lucashthiele/gator/internal/model"
 )
 
@@ -18,10 +19,10 @@ func registerHandlers(cmd *model.Commands) {
 	cmd.Register("reset", handlers.HandlerReset)
 	cmd.Register("users", handlers.HandlerUsers)
 	cmd.Register("agg", handlers.HandlerAgg)
-	cmd.Register("addfeed", handlers.HandlerAddFeed)
+	cmd.Register("addfeed", middlewares.LoggedIn(handlers.HandlerAddFeed))
 	cmd.Register("feeds", handlers.HandlerFeeds)
-	cmd.Register("follow", handlers.HandlerFollow)
-	cmd.Register("following", handlers.HandlerFollowing)
+	cmd.Register("follow", middlewares.LoggedIn(handlers.HandlerFollow))
+	cmd.Register("following", middlewares.LoggedIn(handlers.HandlerFollowing))
 }
 
 func getCommand(args []string) (model.Command, error) {

@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/lucashthiele/gator/internal/database"
 	"github.com/lucashthiele/gator/internal/model"
-	"github.com/lucashthiele/gator/internal/shared"
 )
 
 func createFeed(s *model.State, feedName, feedUrl string) (database.Feed, error) {
@@ -33,12 +32,7 @@ func createFeed(s *model.State, feedName, feedUrl string) (database.Feed, error)
 	return createdFeed, nil
 }
 
-func createFollow(s *model.State, createdFeed database.Feed) error {
-	user, err := shared.GetCurrentUser(s)
-	if err != nil {
-		return err
-	}
-
+func createFollow(s *model.State, createdFeed database.Feed, user *database.User) error {
 	feedFollow := &database.FeedFollow{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
@@ -47,14 +41,14 @@ func createFollow(s *model.State, createdFeed database.Feed) error {
 		FeedID:    createdFeed.ID,
 	}
 
-	_, err = s.Db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams(*feedFollow))
+	_, err := s.Db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams(*feedFollow))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func HandlerAddFeed(s *model.State, cmd model.Command) error {
+func HandlerAddFeed(s *model.State, cmd model.Command, user *database.User) error {
 	expectedArguments := 2
 	if len(cmd.Arguments) != expectedArguments {
 		return fmt.Errorf(
@@ -71,7 +65,7 @@ func HandlerAddFeed(s *model.State, cmd model.Command) error {
 		return err
 	}
 
-	err = createFollow(s, createdFeed)
+	err = createFollow(s, createdFeed, user)
 	if err != nil {
 		return err
 	}

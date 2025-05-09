@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/lucashthiele/gator/internal/database"
 	"github.com/lucashthiele/gator/internal/model"
-	"github.com/lucashthiele/gator/internal/shared"
 )
 
 func getFeedFromURL(s *model.State, feedUrl string) (*database.Feed, error) {
@@ -22,7 +21,7 @@ func getFeedFromURL(s *model.State, feedUrl string) (*database.Feed, error) {
 	return &feed, nil
 }
 
-func HandlerFollow(s *model.State, cmd model.Command) error {
+func HandlerFollow(s *model.State, cmd model.Command, user *database.User) error {
 	expectedArguments := 1
 
 	if len(cmd.Arguments) != expectedArguments {
@@ -30,11 +29,6 @@ func HandlerFollow(s *model.State, cmd model.Command) error {
 			"expected %d arguments but got %d arguments\nyou need to provide only the url to follow",
 			expectedArguments,
 			len(cmd.Arguments))
-	}
-
-	user, err := shared.GetCurrentUser(s)
-	if err != nil {
-		return err
 	}
 
 	feedUrl := cmd.Arguments[0]

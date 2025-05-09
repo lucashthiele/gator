@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/lucashthiele/gator/internal/model"
-	"github.com/lucashthiele/gator/internal/shared"
 )
 
 func HandlerLogin(s *model.State, cmd model.Command) error {
@@ -19,8 +20,10 @@ func HandlerLogin(s *model.State, cmd model.Command) error {
 
 	username := cmd.Arguments[0]
 
-	_, err := shared.GetCurrentUser(s)
-	if err != nil {
+	_, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("user does not exists")
+	} else if err != nil {
 		return err
 	}
 
