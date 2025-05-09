@@ -24,6 +24,7 @@ func registerHandlers(cmd *model.Commands) {
 	cmd.Register("follow", middlewares.LoggedIn(handlers.HandlerFollow))
 	cmd.Register("following", middlewares.LoggedIn(handlers.HandlerFollowing))
 	cmd.Register("unfollow", middlewares.LoggedIn(handlers.HandlerUnfollow))
+	cmd.Register("browse", middlewares.LoggedIn(handlers.HandlerBrowse))
 }
 
 func getCommand(args []string) (model.Command, error) {

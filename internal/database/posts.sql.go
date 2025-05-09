@@ -75,9 +75,10 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 const getPostsByUser = `-- name: GetPostsByUser :many
 SELECT TITLE,
        DESCRIPTION,
-       PUBLISHED_AT
+       PUBLISHED_AT,
+       P.URL
   FROM POSTS P
-  JOIN FEEDS F ON F.ID = P.FEEDS_ID
+  JOIN FEEDS F ON F.ID = P.FEED_ID
   JOIN FEED_FOLLOWS FF ON FF.FEED_ID = F.ID
  WHERE FF.USER_ID = $1
  ORDER BY PUBLISHED_AT DESC NULLS LAST
@@ -93,6 +94,7 @@ type GetPostsByUserRow struct {
 	Title       string
 	Description sql.NullString
 	PublishedAt sql.NullTime
+	Url         string
 }
 
 func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) ([]GetPostsByUserRow, error) {
@@ -104,7 +106,12 @@ func (q *Queries) GetPostsByUser(ctx context.Context, arg GetPostsByUserParams) 
 	var items []GetPostsByUserRow
 	for rows.Next() {
 		var i GetPostsByUserRow
-		if err := rows.Scan(&i.Title, &i.Description, &i.PublishedAt); err != nil {
+		if err := rows.Scan(
+			&i.Title,
+			&i.Description,
+			&i.PublishedAt,
+			&i.Url,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
