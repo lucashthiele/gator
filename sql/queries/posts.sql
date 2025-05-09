@@ -1,0 +1,32 @@
+-- name: CreatePost :one
+INSERT INTO POSTS (
+  ID,
+  CREATED_AT,
+  UPDATED_AT,
+  TITLE,
+  URL,
+  DESCRIPTION,
+  PUBLISHED_AT,
+  FEED_ID
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8
+)
+RETURNING *;
+
+-- name: GetPostsByUser :many
+SELECT TITLE,
+       DESCRIPTION,
+       PUBLISHED_AT
+  FROM POSTS P
+  JOIN FEEDS F ON F.ID = P.FEEDS_ID
+  JOIN FEED_FOLLOWS FF ON FF.FEED_ID = F.ID
+ WHERE FF.USER_ID = $1
+ ORDER BY PUBLISHED_AT DESC NULLS LAST
+ LIMIT $2;

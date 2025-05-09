@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/lucashthiele/gator/internal/database"
 	"github.com/lucashthiele/gator/internal/model"
 )
@@ -65,11 +67,43 @@ func markFeedFetched(feed database.GetNextFeedToFetchRow, s *model.State) error 
 	return s.Db.MarkFeedFetched(context.Background(), params)
 }
 
-func printPosts(fetchedFeed *model.RSSFeed) {
-	fmt.Println("List of post in this feed:")
+func parseCustomTime(input string) (time.Time, error) {
+	return time.Parse(time.RFC1123Z, input)
+}
+
+func savePosts(s *model.State, feedId uuid.UUID, fetchedFeed *model.RSSFeed) error {
 	for _, post := range fetchedFeed.Channel.Item {
-		fmt.Printf(" - %s\n", post.Title)
+		pubDate, err := parseCustomTime(post.PubDate)
+		if err != nil {
+			return err
+		}
+		postParams := database.CreatePostParams{
+			ID:        uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Title:     post.Title,
+			Description: sql.NullString{
+				String: post.Description,
+				Valid:  true,
+			},
+			PublishedAt: sql.NullTime{
+				Time:  pubDate,
+				Valid: true,
+			},
+			Url:    post.Link,
+			FeedID: feedId,
+		}
+
+		_, err = s.Db.CreatePost(context.Background(), postParams)
+		if err != nil {
+			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+				continue
+			}
+			return err
+		}
 	}
+
+	return nil
 }
 
 func scrapeFeeds(s *model.State) {
@@ -86,7 +120,10 @@ func scrapeFeeds(s *model.State) {
 			fmt.Printf("Error during scraping (fetching Feed): %s\n", err.Error())
 		}
 
-		printPosts(fetchedFeed)
+		err = savePosts(s, feed.ID, fetchedFeed)
+		if err != nil {
+			fmt.Printf("Error during scraping (saving post): %s\n", err.Error())
+		}
 
 		err = markFeedFetched(feed, s)
 		if err != nil {
